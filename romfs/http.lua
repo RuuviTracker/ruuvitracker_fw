@@ -1,12 +1,15 @@
+require('common')
 require('gsm')
 
 function http_get(url)
 	local data = ""
+        local user_agent = "RuuviTracker firmware/" .. firmware.version
 	--Start HTTP request
 	gsm_cmd([[
 AT+HTTPINIT
 AT+HTTPPARA="CID","1"
 AT+HTTPPARA="URL","]]..url..[["
+AT+HTTPPARA="UA","]]..user_agent..[["
 AT+HTTPPARA="REDIR","1"]])
 	gsm_send('AT+HTTPACTION=0')
 	ret = gsm_wait("^%+HTTPACTION")
