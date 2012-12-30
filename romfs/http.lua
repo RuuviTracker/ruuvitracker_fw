@@ -3,7 +3,7 @@ require('gsm')
 
 function http_get(url)
 	local data = ""
-        local user_agent = "RuuviTracker firmware/" .. firmware.version
+	local user_agent = "RuuviTracker firmware/" .. firmware.version
 	--Start HTTP request
 	gsm_cmd([[
 AT+HTTPINIT
@@ -53,10 +53,12 @@ function http_post(url, data, content)
 		data = url_encode(data)
 		content = 'application/x-www-form-urlencoded'
 	end
+	local user_agent = "RuuviTracker firmware/" .. firmware.version
 	gsm_cmd([[
 AT+HTTPINIT
 AT+HTTPPARA="CID","1"
 AT+HTTPPARA="URL","]]..url..[["
+AT+HTTPPARA="UA","]]..user_agent..[["
 AT+HTTPPARA="CONTENT","]]..content..[["
 AT+HTTPPARA="REDIR","1"]])
 	gsm_send('AT+HTTPDATA='..data:len()..',1000')
