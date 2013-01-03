@@ -52,7 +52,7 @@ end
 --]]
 
 local function create_event_json(event, tracker_code, shared_secret) 
-   event.version = 1
+   event.version = "1"
    -- TODO if possible, set event.time field here or before
    event.tracker_code = tracker_code
 --   if shared_secret then

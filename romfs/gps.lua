@@ -13,23 +13,33 @@ end
 
 function gps_parse_rmc(line)
 			local time, status, latitude, ns_indicator, longitude,
-			ew_indicator, speed = line:match("^%$GPRMC,([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*)")
+			ew_indicator, speed_knots, heading, date = line:match("^%$GPRMC,([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*)")
 			if status == "A" then print("Status: Valid location")
-			else print ("Not valid location") return end
+			else print("Not valid location") return end
+
+                        local speed_ms = nil
+                        if speed_knots then
+                           speed_ms = 0.51444 * speed_knots
+                        end
 			latitude = latitude..','..ns_indicator
 			longitude = longitude..','..ew_indicator
 			print("Time: " ..time)
+			print("Date: " ..date)
 			print("Status: "..status)
 			print("Lat:" ..latitude)
 			print("Lon:" ..longitude)
+                        print("Speed:" .. speed_knots .. "knots")
+                        print("Heading:" .. heading)
 			print("Sending event")
 			local event={}
 			--Get first timestamp as a session_code
-			session_code = session_code or time
-			event.version="1"
+			session_code = session_code or (date .. '-' .. time)
 			event.latitude = latitude
 			event.longitude = longitude
 			event.session_code = session_code
+                        event.speed = speed_ms
+                        event.heading = heading
+
 			send_event(event)
 end
 
