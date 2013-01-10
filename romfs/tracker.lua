@@ -29,19 +29,19 @@ event.password = nil
 
 local function base_string(event)
    local sorted_keys = {}
-   for key in pairs(event) do 
-      table.insert(sorted_keys, key) 
+   for key in pairs(event) do
+      table.insert(sorted_keys, key)
    end
    table.sort(sorted_keys)
    local s = ""
-   for _, key in ipairs(sorted_keys) do 
+   for _, key in ipairs(sorted_keys) do
       local value = event[key]
       s = s .. key .. ':' .. value .. '|'
    end
    return s
 end
 
-local function generate_mac(event, shared_secret) 
+local function generate_mac(event, shared_secret)
    local base = base_string(event)
    local mac = sha1.hmac(shared_secret, base)
    return mac
@@ -85,14 +85,14 @@ end
 
 --[[
 -- Unit tests, uncomment to enable
-function create_test_event() 
+function create_test_event()
    local event = {
-      heading="90",
-      time="2013-01-05T15:45:02.000Z",
-      speed=7.2227376,
-      latitude="6504.019739,N",
-      session_code="test",
-      longitude="02525.097090,E"
+      heading      = "90",
+      time         = "2013-01-05T15:45:02.000Z",
+      speed        = 7.2227376,
+      latitude     = "6504.019739,N",
+      session_code = "test",
+      longitude    = "02525.097090,E"
    }
    return event
 end
@@ -101,28 +101,28 @@ end
 function tracker_handler()
    local timer = timers.tracker_timer
    local intervall = options.tracking_intervall * 1e6 -- to microseconds
-   tmr.setclock( timer, 2e3 ) -- 2kHz is known to work(on ruuviA), allow intervalls from 0s to 32s
-   local counter = tmr.start(timer) 
+   tmr.setclock(timer, 2e3) -- 2kHz is known to work (on ruuviA), allow intervalls from 0s to 32s
+   local counter = tmr.start(timer)
    
-   --wait for gps to start
+   -- Wait for GPS to start
    while not gps.is_enabled() do
        coroutine.yield()
    end
    send_event({annotation = "Boot OK"})
-   --loop
+   -- Loop
    while true do
-      local delta = tmr.gettimediff(timer, counter, tmr.read(timer) )
-      if delta > intervall then -- time to send
+      local delta = tmr.gettimediff(timer, counter, tmr.read(timer))
+      if delta > intervall then -- Time to send
 	 logger:debug("Time to send")
 	 if gps.is_fixed then
 	    send_event(gps.event)
 	 else
 	    logger:debug("no fix")
 	 end
-	 counter = tmr.start(timer) --clear, even when there is no fix, wait another intervall
+	 counter = tmr.start(timer) -- Clear; even when there is no fix, wait another intervall
       end
       coroutine.yield()
    end
 end
 --create co-routine
-handler = coroutine.create( tracker_handler )
+handler = coroutine.create(tracker_handler)

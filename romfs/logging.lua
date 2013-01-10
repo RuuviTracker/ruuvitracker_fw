@@ -20,7 +20,7 @@ Logger.config = {}
 Logger.level = {DEBUG = 10, INFO = 20, WARN = 30, ERROR = 50, NEVER = 100}
 -- Category ROOT is default.
 Logger.config = {ROOT = Logger.level.DEBUG}
--- Logger.appender points to a function that stores 
+-- Logger.appender points to a function that stores
 -- messages somewhere (memory card, serial connection etc)
 Logger.appender = print
 
@@ -31,7 +31,7 @@ end
 function Logger:log(level, message)
    local category_level = self.config[self.category] or self.config.ROOT or 0
    local message_level = self.level[level]
-   -- TODO get timestamp and add it to the message
+   -- TODO: get timestamp and add it to the message
    if category_level <= message_level then
       self.appender(level .. ' ' .. self.category .. ': ' .. message)
    end

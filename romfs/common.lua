@@ -1,4 +1,4 @@
--- Common functionality and constants 
+-- Common functionality and constants
 
 firmware = {}
 firmware.version = "0.1"

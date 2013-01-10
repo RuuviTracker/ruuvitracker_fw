@@ -2,21 +2,21 @@
 function i2c_test(id, addr)
    print("Setup I2C id="..id)
    speed = i2c.setup(id, i2c.FAST)
-   print("speed="..speed)
+   print("Speed="..speed)
    
-   print("send start")
+   print("Send start")
    i2c.start(id)
-   print("Select I2C device "..addr);
-   i2c.address(id, addr, i2c.TRANSMITTER )
+   print("Select I2C device "..addr)
+   i2c.address(id, addr, i2c.TRANSMITTER)
    print("Send subaddress 0x20")
    i2c.write(id, 0x20)
    i2c.stop(id)
    print("Read byte")
    i2c.start(id)
-   i2c.address(id, addr, i2c.RECEIVER )
-   byte = i2c.read(id,1)
+   i2c.address(id, addr, i2c.RECEIVER)
+   byte = i2c.read(id, 1)
    i2c.stop(id)
-   print( string.format("%02X", string.byte(byte)) )
+   print(string.format("%02X", string.byte(byte)))
 end
 
 --Test LSM303DLHC

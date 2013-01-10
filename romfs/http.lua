@@ -5,13 +5,13 @@ require('logging')
 module('http', package.seeall)
 
 local logger = Logger:new('http')
-local timeout=10e6 -- 10s
+local timeout = 10e6 -- 10s
 
 function get(url)
 	local data = ""
 	local user_agent = "RuuviTracker firmware/" .. firmware.version
 	logger:debug("Get request to "..url)
-	--Start HTTP request
+	-- Start HTTP request
 	gsm.cmd([[
 AT+HTTPINIT
 AT+HTTPPARA="CID","1"
@@ -25,38 +25,39 @@ AT+HTTPPARA="REDIR","1"]])
 	local len
 	if ret then
 	   logger:debug("connected")
-	   _,_,code,len = string.find(ret,"%+HTTPACTION:0,(%d+),(%d+)")
+	   _,_,code,len = string.find(ret, "%+HTTPACTION:0,(%d+),(%d+)")
 	   if code == "200" then
 	      logger:debug("200 OK, Reading "..len.." bytes")
 	      gsm.send('AT+HTTPREAD')
 	      gsm.wait("^%+HTTPREAD:"..len)
-	      --All bytes are data after this
+	      -- All bytes are data after this
 	      data = gsm.read_raw(len)
-	      --All bytes read, Wait for OK
+	      -- All bytes read, wait for OK
 	      gsm.wait("^OK")
 	   else
 	      logger:warn("Error "..code)
 	   end
 	else
-	   logger:warn("timeout!")
+	   logger:warn("Timeout!")
 	end
-	--Terminate HTTP commands
+	-- Terminate HTTP commands
 	gsm.cmd("AT+HTTPTERM")
 	return code, data
 end
 
---URL Encode
---From http://lua-users.org/wiki/StringRecipes
+-- URL Encode
+-- From http://lua-users.org/wiki/StringRecipes
 function url_encode(str)
-  if (str) then
-    str = string.gsub (str, "\n", "\r\n")
-    str = string.gsub (str, "([^%w ])",
-        function (c) return string.format ("%%%02X", string.byte(c)) end)
-    str = string.gsub (str, " ", "+")
+  if str then
+    str = string.gsub(str, "\n", "\r\n")
+    str = string.gsub(str, "([^%w ])",
+        function(c) return string.format("%%%02X", string.byte(c)) end)
+    str = string.gsub(str, " ", "+")
   end
-  return str	
+  return str
 end
 
+-- TODO: Condense get() and post(); quite some code is duplicated
 function post(url, data, content)
    if content == nil then
       data = url_encode(data)
@@ -87,17 +88,17 @@ AT+HTTPPARA="REDIR","1"]])
 	 logger:debug("200 OK, Reading "..len.." bytes")
 	 gsm.send('AT+HTTPREAD')
 	 gsm.wait("^%+HTTPREAD:"..len)
-	 --All bytes are data after this
+	 -- All bytes are data after this
 	 data = gsm.read_raw(len)
-	 --All bytes read, Wait for OK
+	 -- All bytes read, Wait for OK
 	 gsm.wait("^OK")
       else
 	 logger:warn("Error "..code)
       end
    else
-      logger:warn("timeout")
+      logger:warn("Timeout")
    end
    gsm.cmd("AT+HTTPTERM")
-   return code,data
+   return code, data
 end
 
