@@ -444,7 +444,15 @@ void gsm_set_power_state(enum Power_mode mode)
   }
 }
 
-
+/* Check if GPS flag is set */
+int gsm_is_gps_ready()
+{
+  if((gsm.flags&GPS_READY) != 0) {
+    return TRUE;
+  } else {
+    return FALSE;
+  }
+}
 
 /* -------------------- L U A   I N T E R F A C E --------------------*/
 

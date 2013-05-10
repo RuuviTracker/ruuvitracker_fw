@@ -17,6 +17,7 @@ int gsm_cmd(const char *cmd); 	/* Send AT command to modem. Returns AT_OK, AT_FA
 int gsm_wait(const char *pattern, int timeout, char *line); /* wait for pattern to appear */
 void gsm_uart_write(const char *line);
 void gsm_set_power_state(enum Power_mode mode);
+int gsm_is_gps_ready();         /* Check if GPS flag is set in GSM */
 
 /* LUA Application interface */
 int gsm_send_cmd(lua_State *L);

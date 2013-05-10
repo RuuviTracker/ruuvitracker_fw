@@ -12,9 +12,6 @@ if gsm.is_pin_required() then
     gsm.send_pin( config.gsm.pin_code )
 end
 
--- Wait for the GPS ready flag (TODO: implement this in GPS driver)
-repeat ruuvi.delay_ms(1000) until gsm.flag_is_set(gsm.GPS_READY)
-
 -- Power up GPS device
 print("Powering up GPS\n")
 gps.set_power_state(gps.GPS_POWER_ON)
