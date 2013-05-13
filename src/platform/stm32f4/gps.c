@@ -29,9 +29,60 @@
 #define MIN_OPT_LEVEL 2
 #include "lrodefs.h"
 
+struct gps_device {
+  enum GPS_power_mode power_mode;
+  enum GPS_state state;
+  int serial_port_validated;
+} static gps = {	                /* Initial status */
+  .power_mode = GPS_POWER_OFF,
+  .state = STATE_OFF,
+  .serial_port_validated = FALSE, /* For production tests, MCU<->GPS serial line */
+};
+
+/* Location data */
+struct _gps_data {
+    int     fix_type;
+    int     n_satellites;
+
+    double  lat;
+    char    ns;
+    double  lon;
+    char    ew;
+    double  speed;
+    double  heading;
+
+    double  pdop;
+    double  hdop;
+    double  vdop;
+
+    gps_datetime dt;
+} static gps_data = {
+  .fix_type     = GPS_FIX_TYPE_NONE,  // Set initial values
+  .n_satellites = 0,
+  .lat          = 0.0,
+  .ns           = '-',
+  .lon          = 0.0,
+  .ew           = '-',
+  .speed        = 0.0,
+  .heading      = 0.0,
+  .pdop         = 0.0,
+  .hdop         = 0.0,
+  .vdop         = 0.0,
+};
 
 
+/* ===================C interface begins===================================== */
 
+/* For production tests, check that MCU<->GPS serial line works */
+int gps_validate_serial_port()
+{
+  return gps.serial_port_validated;
+}
+
+
+/* ===================Lua interface begins=================================== */
+
+/* Check if GPS has a fix */
 int gps_has_fix(lua_State *L)
 {
   lua_pushboolean(L, (gps.state == STATE_HAS_3D_FIX) || 
@@ -78,7 +129,7 @@ int gps_get_location(lua_State *L)
 
 
 
-/* ===================Internal functions===================== */
+/* ===================Internal functions begin=============================== */
 
 /* Setup IO ports. Called in platform_setup() from platform.c */
 void gps_setup_io()
@@ -95,7 +146,7 @@ void gps_line_received()
 {
   char buf[GPS_BUFF_SIZE];
   int c, i = 0;
-
+  
   while('\n' != (c=platform_s_uart_recv(GPS_UART_ID, 0))) { /* 0 = return immediately */
     if(-1 == c)
       break;
@@ -107,23 +158,54 @@ void gps_line_received()
   }
   buf[i] = 0;
   if(i > 0) {
-    if(strstr(buf, "$GPRMC")) {
-      parse_gprmc(buf);
-    } else if(strstr(buf, "$GPGGA")) {  // Global Positioning System Fix Data
-      parse_gpgga(buf);
-    } else if(strstr(buf, "$GPGSA")) {  // GPS DOP and active satellites 
-      parse_gpgsa(buf);
-    } else if(strstr(buf, "$GPGSV")) {  // Satellites in view
-      //parse_gpgsv(buf); // TODO
-    } else if(strstr(buf, "$GPGLL")) {  // Geographic Position, Latitude / Longitude and time.
-      //parse_gpgll(buf); // TODO
-    } else if(strstr(buf, "$GPVTG")) {  // Track Made Good and Ground Speed
-      //parse_gpvtg(buf); // TODO
-    } else if(strstr(buf, "$GPZDA")) {  // Date & Time
-      //parse_gpzda(buf); // Not needed ATM, GPRMC has the same data&time data
+    if(calculate_gps_checksum(buf)) {
+      gps.serial_port_validated = TRUE;
+      if(strstr(buf, "$GPRMC")) {
+        parse_gprmc(buf);
+      } else if(strstr(buf, "$GPGGA")) {  // Global Positioning System Fix Data
+        parse_gpgga(buf);
+      } else if(strstr(buf, "$GPGSA")) {  // GPS DOP and active satellites 
+        parse_gpgsa(buf);
+      } else if(strstr(buf, "$GPGSV")) {  // Satellites in view
+        //parse_gpgsv(buf); // TODO
+      } else if(strstr(buf, "$GPGLL")) {  // Geographic Position, Latitude / Longitude and time.
+        //parse_gpgll(buf); // TODO
+      } else if(strstr(buf, "$GPVTG")) {  // Track Made Good and Ground Speed
+        //parse_gpvtg(buf); // TODO
+      } else if(strstr(buf, "$GPZDA")) {  // Date & Time
+        //parse_gpzda(buf); // Not needed ATM, GPRMC has the same data&time data
+      } else {
+        printf("GPS: input line doesn't match any supported GP sentences!\n");
+      }
     } else {
-      printf("GPS: input line doesn't match any supported GP sentences!\n");
+      printf("GPS: error, calculated checksum does not match received!\n");
     }
+  }
+}
+
+int calculate_gps_checksum(const char *data) {
+  char checksum = 0;
+  char received_checksum = 0;
+  char *checksum_index;
+
+  if((checksum_index = strstr(data, "*")) == NULL) { // Find the beginning of checksum
+    printf("GPS: error, cannot find the beginning of checksum!\n");
+    return FALSE;
+  }
+  sscanf(checksum_index + 1, "%02hhx", &received_checksum);
+  
+  /* Loop through data, XORing each character to the next */
+  data = strstr(data, "$");
+  data++;
+  while(*data != '*') {
+    checksum ^= *data;
+    data++;
+  }
+  
+  if(checksum == received_checksum) {
+    return TRUE;
+  } else {
+    return FALSE;
   }
 }
 
