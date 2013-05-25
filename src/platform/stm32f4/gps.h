@@ -13,8 +13,6 @@
 
 #define GPS_BUFF_SIZE	128
 
-enum GPS_power_mode { GPS_POWER_OFF=0, GPS_POWER_ON };
-
 enum GPS_state {
   STATE_UNKNOWN = 0,
   STATE_OFF = 1,
@@ -41,7 +39,6 @@ int gps_validate_serial_port();
 /* LUA Application interface */
 int gps_power_on(lua_State *L);
 int gps_power_off(lua_State *L);
-int gps_set_power_state(lua_State *L);
 int gps_has_fix(lua_State *L);
 int gps_get_location(lua_State *L);
 int gps_get_data(lua_State *L);

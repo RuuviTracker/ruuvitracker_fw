@@ -30,41 +30,37 @@
 #include "lrodefs.h"
 
 struct gps_device {
-	enum GPS_power_mode power_mode;
 	enum GPS_state state;
 	int serial_port_validated;
 } static gps = {					/* Initial status */
-	.power_mode = GPS_POWER_OFF,
 	.state = STATE_OFF,
 	.serial_port_validated = FALSE,	/* For production tests, MCU<->GPS serial line */
 };
 
 /* Location data */
 struct _gps_data {
-    int     fix_type;
-    int     n_satellites;
+    int		fix_type;
+    int		n_satellites;
 
-    double  lat;
-    char    ns;
-    double  lon;
-    char    ew;
-    double  speed;
-    double  heading;
+    double	lat;
+    double	lon;
+    double	speed;
+    double	heading;
+    double	altitude;
 
-    double  pdop;
-    double  hdop;
-    double  vdop;
+    double	pdop;
+    double	hdop;
+    double	vdop;
 
     gps_datetime dt;
 } static gps_data = {
   .fix_type     = GPS_FIX_TYPE_NONE,  // Set initial values
   .n_satellites = 0,
   .lat          = 0.0,
-  .ns           = '-',
   .lon          = 0.0,
-  .ew           = '-',
   .speed        = 0.0,
   .heading      = 0.0,
+  .altitude     = 0.0,
   .pdop         = 0.0,
   .hdop         = 0.0,
   .vdop         = 0.0,
@@ -116,35 +112,6 @@ int gps_power_off(lua_State *L)
 	return 0;
 }
 
-int gps_set_power_state(lua_State *L)
-{
-  // TODO: handle error states
-  enum GPS_power_mode next = luaL_checkinteger(L, -1);
-  
-  switch(next) {
-    case GPS_POWER_ON:
-      if(gps.state == STATE_OFF) {
-        while(gsm_is_gps_ready() != TRUE) {
-          delay_ms(100);
-        }
-        gsm_cmd("AT+CGPSPWR=1");    /* Power-on */
-        gsm_cmd("AT+CGPSOUT=255");  /* Select which GP sentences GPS should print */
-        gsm_cmd("AT+CGPSRST=1");    /* Do a GPS warm reset */
-      }
-      break;
-    case GPS_POWER_OFF:
-      if(gps.state == STATE_ON) {
-        // TODO: handle other states
-        gsm_cmd("AT+CGPSPWR=0");    /* Power-off */
-      }
-      break;
-    default:
-      printf("GPS: Error, unknown power state!\n");
-      break;
-    }
-  return 0;
-}
-
 int gps_get_location(lua_State *L)
 {
  	lua_pushnumber(L, gps_data.lat);
@@ -165,11 +132,11 @@ int gps_get_data(lua_State *L)
 	lua_pushinteger(L, gps_data.n_satellites);
 	lua_settable(L, -3);
 	
-	lua_pushstring(L, "lat");
+	lua_pushstring(L, "latitude");
 	lua_pushnumber(L, gps_data.lat);
 	lua_settable(L, -3);
 	
-	lua_pushstring(L, "lon");
+	lua_pushstring(L, "longitude");
 	lua_pushnumber(L, gps_data.lon);
 	lua_settable(L, -3);
 	
@@ -181,21 +148,26 @@ int gps_get_data(lua_State *L)
 	lua_pushnumber(L, gps_data.heading);
 	lua_settable(L, -3);
 	
-	lua_pushstring(L, "pdop");
+	// TODO: convert to meters
+	lua_pushstring(L, "altitude");
+	lua_pushnumber(L, gps_data.altitude);
+	lua_settable(L, -3);
+	
+	lua_pushstring(L, "positional_accuracy");
 	lua_pushnumber(L, gps_data.pdop);
 	lua_settable(L, -3);
 	
-	lua_pushstring(L, "vdop");
+	// TODO: convert to meters
+	lua_pushstring(L, "vertical_accuracy");
 	lua_pushnumber(L, gps_data.vdop);
 	lua_settable(L, -3);
 	
-	lua_pushstring(L, "hdop");
+	lua_pushstring(L, "accuracy");
 	lua_pushnumber(L, gps_data.hdop);
 	lua_settable(L, -3);
 	
-	// Construct ISO compatible time string
-	// 2012-01-08T20:57:30.123+0200
-	sprintf(timestr, "%d-%02d-%02dT%02d:%02d:%02d.%dZ",
+	// Construct ISO compatible time string, 2012-01-08T20:57:30.123Z
+	sprintf(timestr, "%d-%02d-%02dT%02d:%02d:%02d.%03dZ",
 		gps_data.dt.year,
 		gps_data.dt.month,
 		gps_data.dt.day,
@@ -203,7 +175,6 @@ int gps_get_data(lua_State *L)
 		gps_data.dt.mm,
 		gps_data.dt.sec,
 		gps_data.dt.msec);
-	
 	lua_pushstring(L, "time");
 	lua_pushstring(L, timestr);
 	lua_settable(L, -3);
@@ -295,18 +266,22 @@ int calculate_gps_checksum(const char *data) {
 
 int parse_gpgga(const char *line) {
     int n_sat = 0;
+	double altitude = 0.0;
     const char *error;
-    
-    error = slre_match(0, "^\\$GPGGA,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,([^,]*),[^,]*,[^,]*,[^,]*",
+
+    error = slre_match(0, "^\\$GPGGA,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,([^,]*),[^,]*,([^,]*),[^,]*",
             line, strlen(line),
-            SLRE_INT, sizeof(n_sat), &n_sat);
+            SLRE_INT, sizeof(n_sat), &n_sat,
+            SLRE_FLOAT, sizeof(altitude), &altitude);
     if(error != NULL) {
-        printf("GPS: Error parsing GPGGA string '%s': %s\n", line, error);
+        //printf("GPS: Error parsing GPGGA string '%s': %s\n", line, error);
         return -1;
     } else {
-		if(gps_data.n_satellites != n_sat)
-	        printf("GPS: Number of satellites in view: %d\n", gps_data.n_satellites);
+	if(gps_data.n_satellites != n_sat) {
+	        printf("GPS: Number of satellites in view: %d\n", n_sat);
+	}
         gps_data.n_satellites = n_sat;
+	gps_data.altitude = altitude;
         return 0;
     }
 }
@@ -428,7 +403,13 @@ int parse_gprmc(const char *line) {
         parse_nmea_time_str(time, &gps_data.dt);
         parse_nmea_date_str(date, &gps_data.dt);
         gps_data.lat = nmeadeg2degree(lat);
+        if(strstr(ns, "S")) {
+        	gps_data.lat = -1 * gps_data.lat;
+        }
         gps_data.lon = nmeadeg2degree(lon);
+        if(strstr(ew, "W")) {
+        	gps_data.lon = -1 * gps_data.lon;
+        }
         /*
         printf("GPS: hh: %d\n", gps_data.dt.hh);
         printf("GPS: mm: %d\n", gps_data.dt.mm);
@@ -499,7 +480,6 @@ const LUA_REG_TYPE gps_map[] =
   /* FUNCTIONS */
   { LSTRKEY("power_on") , LFUNCVAL(gps_power_on) },
   { LSTRKEY("power_off") , LFUNCVAL(gps_power_off) },
-  { LSTRKEY("set_power_state") , LFUNCVAL(gps_set_power_state) },
   { LSTRKEY("has_fix") , LFUNCVAL(gps_has_fix) },
   { LSTRKEY("get_location") , LFUNCVAL(gps_get_location) },
   { LSTRKEY("get_data") , LFUNCVAL(gps_get_data) },
@@ -507,8 +487,6 @@ const LUA_REG_TYPE gps_map[] =
 
   /* CONSTANTS */
 #define MAP(a) { LSTRKEY(#a), LNUMVAL(a) }
-  MAP( GPS_POWER_OFF),
-  MAP( GPS_POWER_ON),
   MAP( STATE_UNKNOWN),
   MAP( STATE_OFF),
   MAP( STATE_ON ),

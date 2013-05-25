@@ -6,6 +6,7 @@ local JSON = require('json')
 module('tracker', package.seeall)
 
 local logger = Logger:new('tracker')
+local session_code = nil
 --[[ event data structure
 event = {}
 event.version = nil
@@ -17,6 +18,7 @@ event.latitude = nil
 event.longitude = nil
 event.accuracy = nil
 event.vertical_accuracy = nil
+event.positional_accuracy = nil
 event.heading = nil
 event.satellite_count = nil
 event.battery = nil
@@ -121,7 +123,21 @@ function tracker_handler()
 	 logger:debug("Time to send")
 	 if gps.has_fix() then
 	    local event={}
-	    event.latitude, event.longitude = gps.get_location();
+	    gps_data = gps.get_data()
+	    if session_code == nil then
+		session_code = gps_data.time
+	    end
+	    event.session_code = session_code
+	    event.latitude = gps_data.latitude
+	    event.longitude = gps_data.longitude
+	    event.time = gps_data.time
+	    event.speed = gps_data.speed
+	    event.accuracy = gps_data.accuracy
+	    event.vertical_accuracy = gps_data.vertical_accuracy
+	    event.positional_accuracy = gps_data.positional_accuracy
+	    event.altitude = gps_data.altitude
+	    event.heading = gps_data.heading
+	    event.satellite_count = gps_data.satellite_count
 	    send_event(event)
 	 else
 	    logger:debug("no fix")

@@ -14,7 +14,7 @@ end
 
 -- Power up GPS device
 print("Powering up GPS\n")
-gps.set_power_state(gps.GPS_POWER_ON)
+gps.power_on()
 gsm.set_apn(config.gsm.apn)
 
 --[[
