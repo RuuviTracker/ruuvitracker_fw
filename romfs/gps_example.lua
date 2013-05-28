@@ -8,11 +8,8 @@
 print("Powering up GSM\n")
 gsm.set_power_state(gsm.POWER_ON)
 
--- Wait for the GPS ready flag
-repeat ruuvi.delay_ms(1000) until gsm.flag_is_set(gsm.GPS_READY)
-
 -- Power up GPS device
-gps.set_power_state(gps.GPS_POWER_ON)
+gps.power_on()
 
 -- Wait for a GPS fix
 print("Setup done, waiting for GPS fix")

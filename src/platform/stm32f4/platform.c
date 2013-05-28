@@ -166,7 +166,7 @@ static void NVIC_Configuration(void)
 
 #ifdef BUILD_ADC
   nvic_init_structure_adc.NVIC_IRQChannel = DMA2_Stream0_IRQn;
-  nvic_init_structure_adc.NVIC_IRQChannelPreemptionPriority = 1;
+  nvic_init_structure_adc.NVIC_IRQChannelPreemptionPriority = 2;
   nvic_init_structure_adc.NVIC_IRQChannelSubPriority = 0;
   nvic_init_structure_adc.NVIC_IRQChannelCmd = DISABLE;
   NVIC_Init(&nvic_init_structure_adc);
@@ -1046,15 +1046,22 @@ u32 platform_s_cpu_get_frequency()
 
 #ifdef BUILD_ADC
 
-static const u16 adc_gpio_pins[] = { GPIO_Pin_0,  GPIO_Pin_1,  GPIO_Pin_2,  GPIO_Pin_3,
-                                     GPIO_Pin_4,  GPIO_Pin_5,  GPIO_Pin_6,  GPIO_Pin_7,
-                                     GPIO_Pin_0,  GPIO_Pin_1,  GPIO_Pin_0,  GPIO_Pin_1,
-                                     GPIO_Pin_2,  GPIO_Pin_3,  GPIO_Pin_4,  GPIO_Pin_5};
+#if defined(ELUA_BOARD_RUUVIB1)
+// For RuuviTrackerB1:
+// PA3 -> ADC12_IN3 = Microphone
+// PB0 -> ADC12_IN8 = Battery cell voltage
+// PC0 -> ADC12_IN10 = High voltage input voltage
+// The rest of the pins need to be mapped to somewhere due to eLua, at the moment to PB0...
+static const u16 adc_gpio_pins[] = { GPIO_Pin_0,  GPIO_Pin_0,  GPIO_Pin_0,  GPIO_Pin_3,
+                                     GPIO_Pin_0,  GPIO_Pin_0,  GPIO_Pin_0,  GPIO_Pin_0,
+                                     GPIO_Pin_0,  GPIO_Pin_0,  GPIO_Pin_0,  GPIO_Pin_0,
+                                     GPIO_Pin_0,  GPIO_Pin_0,  GPIO_Pin_0,  GPIO_Pin_0};
 
-static GPIO_TypeDef * const adc_gpio_port[] = { GPIOA, GPIOA, GPIOA, GPIOA,
-                                               GPIOA, GPIOA, GPIOA, GPIOA,
-                                               GPIOB, GPIOB, GPIOC, GPIOC,
+static GPIO_TypeDef * const adc_gpio_port[] = { GPIOB, GPIOB, GPIOB, GPIOA,
+                                               GPIOB, GPIOB, GPIOB, GPIOB,
+                                               GPIOB, GPIOC, GPIOC, GPIOC,
                                                GPIOC, GPIOC, GPIOC, GPIOC };
+#endif
 
 /* ADC EXTEN mask */
 #define CR2_EXTEN_RESET           ((uint32_t)0xCFFFFFFF)

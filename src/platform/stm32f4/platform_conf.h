@@ -22,7 +22,7 @@
 //#define BUILD_DHCPC
 //#define BUILD_DNS
 #define BUILD_CON_GENERIC
-//#define BUILD_ADC
+#define BUILD_ADC
 //#define BUILD_RPC
 //#define BUILD_RFS
 //#define BUILD_CON_TCP
@@ -56,7 +56,7 @@
 #define NUM_TIMER             12
 #define NUM_PHYS_TIMER        12
 #define NUM_PWM               0
-#define NUM_ADC               0
+#define NUM_ADC               16
 #define NUM_CAN               0
 #define NUM_I2C               1
 
@@ -156,11 +156,11 @@ extern int luaopen_ruuvi( lua_State *L );
 // ADC Configuration Params
 #define ADC_BIT_RESOLUTION    12
 #define BUF_ENABLE_ADC
-#define ADC_BUF_SIZE          BUF_SIZE_2
+#define ADC_BUF_SIZE          BUF_SIZE_128
 
 // These should be adjusted to support multiple ADC devices
 #define ADC_TIMER_FIRST_ID    0
-#define ADC_NUM_TIMERS        4
+#define ADC_NUM_TIMERS        2
 
 // RPC boot options
 #define RPC_UART_ID           CON_UART_ID
