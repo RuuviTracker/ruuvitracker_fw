@@ -20,6 +20,6 @@ while not voltage == nil do
 end
 
 -- Scale the result and print it
-voltage = (voltage/4096)*3.3*5
+voltage = (voltage/4096)*3.3*6
 print(string.format("High voltage input voltage = %fV", voltage))
 

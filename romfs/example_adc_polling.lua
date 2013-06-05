@@ -41,7 +41,7 @@ while true do
 	       						adcsmoothing[i], tsample))
 			end
 			if v == 10 then
-	    		tsample = (tsample/4096)*3.3*5
+	    		tsample = (tsample/4096)*3.3*6
 	    		term.print(1,i+3,string.format("High input volt (%03d): %04fV\n",
 	    						adcsmoothing[i], tsample))
 			end
