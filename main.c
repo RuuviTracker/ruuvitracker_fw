@@ -34,6 +34,7 @@
 #include "drivers/http.h"
 #include "drivers/reset_button.h"
 #include "drivers/rtchelpers.h"
+#include "drivers/accelerometer.h"
 
 /* I2C interface #1 */
 // TODO: This should probably be defined in board.h or something. It needs to be globally accessible because in case of I2C timeout we *must* reinit the whole I2C subsystem
@@ -236,6 +237,37 @@ static void cmd_accread(BaseSequentialStream *chp, int argc, char *argv[])
     i2cReleaseBus(&I2CD1);
 }    
 
+/**
+ * Accelerometer commands
+ */
+static void cmd_acc(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    char usage[] = "Usage: acc [motion <1,2>] | stop\r\n";
+
+    if (argc < 1) {
+        chprintf(chp, usage);
+        return;
+    }
+    if (0 == strcmp(argv[0], "motion")) {
+        uint8_t pin = argv[1][0] - '0';
+
+        if (pin != 1 && pin != 2) {
+            chprintf(chp, "Invalid interrupt pin: %d\r\n", pin);
+            chprintf(chp, usage);
+            return;
+        }
+
+        acc_mt_enable(pin);
+        chprintf(chp, "Started motion dection with interrupt pin %d\r\n", pin);
+
+    } else if (0 == strcmp(argv[0], "stop")) {
+        acc_mt_disable();
+        chprintf(chp, "Stopped motion detection\r\n");
+    } else {
+        chprintf(chp, "Invalid acc command: %s\r\n", argv[0]);
+        chprintf(chp, usage);
+    }
+}
 
 static const ShellCommand commands[] = {
     {"mem", cmd_mem},
@@ -249,7 +281,8 @@ static const ShellCommand commands[] = {
     {"date", cmd_date},
     {"alarm", cmd_alarm},
     {"wakeup", cmd_wakeup},
-    {"acc", cmd_accread},
+    {"accread", cmd_accread},
+    {"acc", cmd_acc},
     {NULL, NULL}
 };
 
@@ -270,16 +303,30 @@ static WORKING_AREA(waThread1, 128);
 __attribute__((noreturn))
 static void Thread1(void *arg)
 {
+    uint8_t i = 0;
+
     (void)arg;
+
     chRegSetThreadName("blinker");
     while (TRUE) {
-        systime_t time;
 
-        time = SDU.config->usbp->state == USB_ACTIVE ? 250 : 500;
-        palClearPad(GPIOB, GPIOB_LED1);
-        chThdSleepMilliseconds(time);
-        palSetPad(GPIOB, GPIOB_LED1);
-        chThdSleepMilliseconds(time);
+        // Check for movement every 100ms and blink slowly if no movement
+        if (PAL_HIGH == palReadPad(GPIOA, GPIOA_ACC_INT2)) {
+            chThdSleepMilliseconds(100);
+            if (++i >= 10) {
+                i = 0;
+                palTogglePad(GPIOB, GPIOB_LED1);
+            }
+            continue;
+        }
+
+        // If movement detected, blink quickly for 1sec, then reset movement
+        for (i = 0; i < 10; ++i) {
+            palTogglePad(GPIOB, GPIOB_LED1);
+            chThdSleepMilliseconds(100);
+        }
+        i = 0;
+        acc_mt_restart();
     }
 }
 
@@ -314,6 +361,11 @@ int main(void)
     extStart(&EXTD1, &extcfg);
 
     /*
+     * Enable motion detection using interrupt pin 2
+     */
+    acc_mt_enable(2);
+
+    /*
      * Shell manager initialization.
      */
     shellInit();
@@ -340,3 +392,11 @@ int main(void)
         chThdSleepMilliseconds(1000);
     }
 }
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:4
+   c-basic-offset:4
+   End:
+*/

@@ -82,6 +82,7 @@ CSRC = $(PORTSRC) \
        drivers/slre.c \
        drivers/gps.c \
        drivers/gsm.c \
+       drivers/accelerometer.c \
        drivers/http.c \
        drivers/usb_serial.c \
        drivers/sha1.c \
